@@ -1261,8 +1261,7 @@ mod tests {
         // but no receipt data is written.
 
         let factory = create_test_provider_factory();
-        factory
-            .set_storage_settings_cache(StorageSettings::v1().with_receipts_in_static_files(true));
+        factory.set_storage_settings_cache(StorageSettings::v2());
 
         // Setup with block 1
         let provider_rw = factory.database_provider_rw().unwrap();
