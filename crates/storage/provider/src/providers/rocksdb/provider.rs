@@ -1205,7 +1205,7 @@ impl RocksDBProvider {
         tx_nums: &[TxNumber],
         ctx: RocksDBWriteCtx,
     ) -> ProviderResult<()> {
-        if !ctx.storage_settings.any_in_rocksdb() {
+        if !ctx.storage_settings.storage_v2 {
             return Ok(());
         }
 
@@ -1213,10 +1213,10 @@ impl RocksDBProvider {
         let mut r_account_history = None;
         let mut r_storage_history = None;
 
-        let write_tx_hash = ctx.storage_settings.transaction_hash_numbers_in_rocksdb() &&
-            ctx.prune_tx_lookup.is_none_or(|m| !m.is_full());
-        let write_account_history = ctx.storage_settings.account_history_in_rocksdb();
-        let write_storage_history = ctx.storage_settings.storages_history_in_rocksdb();
+        let write_tx_hash =
+            ctx.storage_settings.storage_v2 && ctx.prune_tx_lookup.is_none_or(|m| !m.is_full());
+        let write_account_history = ctx.storage_settings.storage_v2;
+        let write_storage_history = ctx.storage_settings.storage_v2;
 
         STORAGE_POOL.in_place_scope(|s| {
             if write_tx_hash {

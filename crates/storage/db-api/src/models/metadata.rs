@@ -55,55 +55,10 @@ impl StorageSettings {
         Self { storage_v2: false, use_hashed_state: false }
     }
 
-    /// Returns `true` if this node uses v2 storage layout.
-    pub const fn is_v2(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether receipts are stored in static files.
-    pub const fn receipts_in_static_files(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether transaction senders are stored in static files.
-    pub const fn transaction_senders_in_static_files(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether account changesets are stored in static files.
-    pub const fn account_changesets_in_static_files(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether storage changesets are stored in static files.
-    pub const fn storage_changesets_in_static_files(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether storages history is stored in RocksDB.
-    pub const fn storages_history_in_rocksdb(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether transaction hash numbers are stored in RocksDB.
-    pub const fn transaction_hash_numbers_in_rocksdb(&self) -> bool {
-        self.storage_v2
-    }
-
-    /// Whether account history is stored in RocksDB.
-    pub const fn account_history_in_rocksdb(&self) -> bool {
-        self.storage_v2
-    }
-
     /// Sets the `use_hashed_state` flag to the provided value.
     pub const fn with_use_hashed_state(mut self, value: bool) -> Self {
         self.use_hashed_state = value;
         self
-    }
-
-    /// Returns `true` if any tables are configured to be stored in `RocksDB`.
-    pub const fn any_in_rocksdb(&self) -> bool {
-        self.storage_v2
     }
 }
 

@@ -175,13 +175,13 @@ impl<C: ChainSpecParser> Command<C> {
                 let settings = provider_rw.cached_storage_settings();
                 let rocksdb = tool.provider_factory.rocksdb_provider();
 
-                if settings.account_history_in_rocksdb() {
+                if settings.storage_v2 {
                     rocksdb.clear::<tables::AccountsHistory>()?;
                 } else {
                     tx.clear::<tables::AccountsHistory>()?;
                 }
 
-                if settings.storages_history_in_rocksdb() {
+                if settings.storage_v2 {
                     rocksdb.clear::<tables::StoragesHistory>()?;
                 } else {
                     tx.clear::<tables::StoragesHistory>()?;
@@ -193,7 +193,7 @@ impl<C: ChainSpecParser> Command<C> {
                 insert_genesis_history(&provider_rw, self.env.chain.genesis().alloc.iter())?;
             }
             StageEnum::TxLookup => {
-                if provider_rw.cached_storage_settings().transaction_hash_numbers_in_rocksdb() {
+                if provider_rw.cached_storage_settings().storage_v2 {
                     tool.provider_factory
                         .rocksdb_provider()
                         .clear::<tables::TransactionHashNumbers>()?;
