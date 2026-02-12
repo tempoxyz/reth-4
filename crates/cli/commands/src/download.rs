@@ -39,6 +39,11 @@ pub struct DownloadDefaults {
     pub default_base_url: Cow<'static, str>,
     /// Optional custom long help text that overrides the generated help
     pub long_help: Option<String>,
+    /// Chain-specific base URLs, keyed by chain ID.
+    ///
+    /// When a chain ID matches an entry here, that URL is used instead of
+    /// `default_base_url`.
+    pub chain_base_urls: Vec<(u64, Cow<'static, str>)>,
 }
 
 impl DownloadDefaults {
@@ -61,7 +66,18 @@ impl DownloadDefaults {
             ],
             default_base_url: Cow::Borrowed(MERKLE_BASE_URL),
             long_help: None,
+            chain_base_urls: Vec::new(),
         }
+    }
+
+    /// Returns the base URL for the given chain ID, falling back to
+    /// [`default_base_url`](Self::default_base_url) if no chain-specific URL is
+    /// configured.
+    pub fn base_url_for_chain(&self, chain_id: u64) -> &str {
+        self.chain_base_urls
+            .iter()
+            .find_map(|(id, url)| (*id == chain_id).then_some(url.as_ref()))
+            .unwrap_or(self.default_base_url.as_ref())
     }
 
     /// Generates the long help text for the download URL argument using these defaults.
@@ -116,6 +132,19 @@ impl DownloadDefaults {
         self.long_help = Some(help.into());
         self
     }
+
+    /// Add a chain-specific base URL.
+    ///
+    /// When the download command is invoked with `--chain` matching this chain
+    /// ID, the given `url` is used instead of the global `default_base_url`.
+    pub fn with_chain_base_url(
+        mut self,
+        chain_id: u64,
+        url: impl Into<Cow<'static, str>>,
+    ) -> Self {
+        self.chain_base_urls.push((chain_id, url.into()));
+        self
+    }
 }
 
 impl Default for DownloadDefaults {
@@ -142,7 +171,9 @@ impl<C: ChainSpecParser<ChainSpec: EthChainSpec + EthereumHardforks>> DownloadCo
         let url = match self.url {
             Some(url) => url,
             None => {
-                let url = get_latest_snapshot_url().await?;
+                let chain_id = self.env.chain.chain().id();
+                let base_url = DownloadDefaults::get_global().base_url_for_chain(chain_id);
+                let url = get_latest_snapshot_url_from(base_url).await?;
                 info!(target: "reth::cli", "Using default snapshot URL: {}", url);
                 url
             }
@@ -508,9 +539,10 @@ async fn stream_and_extract(url: &str, target_dir: &Path) -> Result<()> {
     Ok(())
 }
 
-// Builds default URL for latest mainnet archive snapshot using configured defaults
-async fn get_latest_snapshot_url() -> Result<String> {
-    let base_url = &DownloadDefaults::get_global().default_base_url;
+/// Builds the URL for the latest snapshot from the given `base_url`.
+///
+/// Fetches `{base_url}/latest.txt` and returns `{base_url}/{filename}`.
+async fn get_latest_snapshot_url_from(base_url: &str) -> Result<String> {
     let latest_url = format!("{base_url}/latest.txt");
     let filename = Client::new()
         .get(latest_url)
@@ -582,6 +614,30 @@ mod tests {
         assert_eq!(defaults.default_base_url, "https://custom.example.com");
         assert_eq!(defaults.available_snapshots.len(), 4); // 2 defaults + 2 added
         assert_eq!(defaults.long_help, Some("Custom help for snapshots".to_string()));
+    }
+
+    #[test]
+    fn test_chain_base_url_lookup() {
+        let defaults = DownloadDefaults::default()
+            .with_base_url("https://snapshots.example.com/1")
+            .with_chain_base_url(42431, "https://snapshots.example.com/42431")
+            .with_chain_base_url(42429, "https://snapshots.example.com/42429");
+
+        // Known chain IDs return their specific URLs
+        assert_eq!(
+            defaults.base_url_for_chain(42431),
+            "https://snapshots.example.com/42431"
+        );
+        assert_eq!(
+            defaults.base_url_for_chain(42429),
+            "https://snapshots.example.com/42429"
+        );
+
+        // Unknown chain ID falls back to default
+        assert_eq!(
+            defaults.base_url_for_chain(9999),
+            "https://snapshots.example.com/1"
+        );
     }
 
     #[test]
